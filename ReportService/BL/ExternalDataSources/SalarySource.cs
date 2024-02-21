@@ -9,25 +9,26 @@ namespace ReportService.BL.ExternalDataSources
 {
     internal class SalarySource : ISalarySource
     {
-        private static readonly HttpClient Client = new HttpClient();
+        private readonly HttpClient _client;
         
         private readonly UrlsSettings _url;
 
-        public SalarySource(IOptions<AppSettings> appSettings)
+        public SalarySource(HttpClient client, IOptions<AppSettings> appSettings)
         {
             _url = appSettings.Value.Urls;
+            _client = client;
         }
 
         public async Task<string> GetSalary(string inn, string buhCode)
         {
-            Client.BaseAddress = new Uri($"{_url.SalaryLocalUrl}/{inn}");
+            _client.BaseAddress = new Uri($"{_url.SalaryLocalUrl}/{inn}");
             
             var requestData = new { buhCode};
             
             var json = Newtonsoft.Json.JsonConvert.SerializeObject(requestData);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
-            using (var response = await Client.PostAsync($"/{inn}", content))
+            using (var response = await _client.PostAsync($"/{inn}", content))
             {
                 response.EnsureSuccessStatusCode();
 

@@ -7,18 +7,19 @@ namespace ReportService.BL.ExternalDataSources
 {
     internal class CodeSource : ICodeSource
     {
-        private static readonly HttpClient Client = new HttpClient();
+        private readonly HttpClient _client;
         
         private readonly UrlsSettings _url;
 
-        public CodeSource(IOptions<AppSettings> appSettings)
+        public CodeSource(HttpClient client, IOptions<AppSettings> appSettings)
         {
             _url = appSettings.Value.Urls;
+            _client = client;
         }
 
         public async Task<string> GetCode(string inn)
         {
-            using (var response = await Client.GetAsync($"{_url.BuchLocalUrl}/{inn}"))
+            using (var response = await _client.GetAsync($"{_url.BuchLocalUrl}/{inn}"))
             {
                 response.EnsureSuccessStatusCode();
 

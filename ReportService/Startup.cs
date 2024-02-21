@@ -6,6 +6,8 @@ using ReportService.BL.ExternalDataSources;
 using ReportService.BL.Services;
 using ReportService.Common;
 using ReportService.Repository;
+using System.Net.Http;
+using System;
 
 namespace ReportService
 {
@@ -23,10 +25,21 @@ namespace ReportService
         {
             services.AddMvc();
 
-            services.AddSingleton<INpgsqlRepository, NpgsqlRepository>();
-            services.AddSingleton<ICodeSource, CodeSource>();
-            services.AddSingleton<ISalarySource, SalarySource>();
+            services.AddSingleton<INpgsqlRepository, NpgsqlRepository>();         
             services.AddSingleton<IReportGenerator, ReportGenerator>();
+            services.AddSingleton<HttpClient>(provider =>
+            {
+                var httpClient = new HttpClient();
+
+                return httpClient;
+            }).AddSingleton<ICodeSource, CodeSource>();
+
+            services.AddSingleton<HttpClient>(provider =>
+            {
+                var httpClient = new HttpClient();
+
+                return httpClient;
+            }).AddSingleton<ISalarySource, SalarySource>(); 
 
             services.Configure<AppSettings>(Configuration.GetSection("ConnectionStrings"));
             services.Configure<AppSettings>(Configuration.GetSection("Urls"));
