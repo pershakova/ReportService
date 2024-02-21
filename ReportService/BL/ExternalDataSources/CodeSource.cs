@@ -11,10 +11,10 @@ namespace ReportService.BL.ExternalDataSources
         
         private readonly UrlsSettings _url;
 
-        public CodeSource(HttpClient client, IOptions<AppSettings> appSettings)
+        public CodeSource(IOptions<AppSettings> appSettings)
         {
             _url = appSettings.Value.Urls;
-            _client = client;
+            _client = new HttpClient();
         }
 
         public async Task<string> GetCode(string inn)
