@@ -16,7 +16,7 @@ namespace ReportService.BL.ExternalDataSources
         public SalarySource(HttpClient client, IOptions<AppSettings> appSettings)
         {
             _url = appSettings.Value.Urls;
-            _client = new HttpClient();
+            _client = client;
         }
 
         public async Task<string> GetSalary(string inn, string buhCode)
