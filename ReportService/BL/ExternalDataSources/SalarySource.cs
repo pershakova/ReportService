@@ -13,10 +13,10 @@ namespace ReportService.BL.ExternalDataSources
         
         private readonly UrlsSettings _url;
 
-        public SalarySource(HttpClient client, IOptions<AppSettings> appSettings)
+        public SalarySource(IOptions<AppSettings> appSettings)
         {
             _url = appSettings.Value.Urls;
-            _client = client;
+            _client = new HttpClient();
         }
 
         public async Task<string> GetSalary(string inn, string buhCode)
