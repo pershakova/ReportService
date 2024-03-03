@@ -1,6 +1,7 @@
 ﻿using System;
 using Npgsql;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using ReportService.Common;
 using Microsoft.Extensions.Logging;
@@ -20,25 +21,33 @@ namespace ReportService.Repository
             _logger = logger;
         }
 
-        public IEnumerable<EmployeeDbEntry> GetEmployees()
-        {       
+        public async Task<IEnumerable<EmployeeDbEntry>> GetEmployeesAsync()
+        {
             using (var connection = new NpgsqlConnection(_connectionString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
+
                     var command = new NpgsqlCommand(CommandString, connection);
-                    var reader1 = command.ExecuteReader();
-
-                    var employees = new List<EmployeeDbEntry>();
-
-                    while (reader1.Read())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        var emp = new EmployeeDbEntry { Name = reader1.GetString(0), Inn = reader1.GetString(1), Department = reader1.GetString(2) };
+                        var employees = new List<EmployeeDbEntry>();
 
-                        employees.Add(emp);
+                        while (await reader.ReadAsync())
+                        {
+                            var emp = new EmployeeDbEntry
+                            {
+                                Name = reader.GetString(0),
+                                Inn = reader.GetString(1),
+                                Department = reader.GetString(2)
+                            };
+
+                            employees.Add(emp);
+                        }
+
+                        return employees;
                     }
-                    return employees;
                 }
                 catch (Exception)
                 {

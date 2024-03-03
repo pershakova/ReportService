@@ -54,7 +54,7 @@ namespace ReportServiceTests
             );
             
             var employeeDbEntries = GetEmployeeDbEntry();
-            npgsqlRepositoryMock.Setup(x => x.GetEmployees()).Returns(employeeDbEntries);
+            npgsqlRepositoryMock.Setup(x => x.GetEmployeesAsync()).ReturnsAsync(employeeDbEntries);
 
             codeSourceMock.Setup(x => x.GetCode(It.IsAny<string>()))
                 .ReturnsAsync((string inn) => $"{inn}");
