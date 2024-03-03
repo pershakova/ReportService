@@ -15,6 +15,7 @@ namespace ReportService
                        .GetCurrentClassLogger();
             try
             {
+
                 BuildWebHost(args).Run();
             }
             catch (Exception ex)
@@ -25,7 +26,8 @@ namespace ReportService
             finally
             {
                 LogManager.Shutdown();
-            }         
+            }
+            
         }
 
         public static IWebHost BuildWebHost(string[] args) =>

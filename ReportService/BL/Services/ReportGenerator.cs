@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Polly;
 using ReportService.BL.ExternalDataSources;
 using ReportService.BL.Models;
 using ReportService.Common;
@@ -40,45 +41,67 @@ namespace ReportService.BL.Services
 
         private async Task<Organization> CreateOrganization()
         {
-                var employeeDbEntries = _npgsqlRepository.GetEmployees();
-                try
-                {
-                    var employeesWithExternalTasks = employeeDbEntries
-                        .Select(async x =>
+            try
+            {
+                var employeesWithExternalTasks = (await _npgsqlRepository.GetEmployeesAsync())
+                    .Select(async x =>
+                    {
+                        try
                         {
-                            try
-                            {
-                                var code = await _codeSource.GetCode(x.Inn);
-                                var salary = await _salarySource.GetSalary(x.Inn, code);
+                            var code = await GetCodeWithRetry(x.Inn);
+                            var salary = await GetSalaryWithRetry(x.Inn, code);
 
-                                return new { Employee = x, Code = code, Salary = salary };
-                            }
-                            catch (Exception)
-                            {
-                                _logger.LogError($"Exception while processing employee {x.Inn}");
-                                throw;
-                            }
-                        })
-                        .ToArray();
-            
-                    var employeesWithExternalData = await Task.WhenAll(employeesWithExternalTasks);
-            
-                    var departments = employeesWithExternalData
-                        .GroupBy(x => x.Employee.Department)
-                        .Select(x =>
-                            new Department(x.Select(y =>
-                                new Employee(y.Employee.Name,
-                                    y.Employee.Inn,
-                                    Convert.ToDecimal(y.Salary))), x.Key));
+                            return new { Employee = x, Code = code, Salary = Convert.ToDecimal(salary)};
+                        }
+                        catch (Exception)
+                        {
+                            _logger.LogError($"Exception while processing employee {x.Inn}");
+                            throw;
+                        }
+                    });
 
-                    return new Organization(departments);
-                }
-                catch (Exception)
+                var employeesWithExternalData = await Task.WhenAll(employeesWithExternalTasks);
+
+                var departments = employeesWithExternalData
+                    .GroupBy(x => x.Employee.Department)
+                    .Select(x => new Department(
+                        x.Select(y => new Employee(
+                            y.Employee.Name,
+                            y.Employee.Inn,
+                            Convert.ToDecimal(y.Salary))),
+                        x.Key));
+
+                return new Organization(departments);
+            }
+            catch (Exception)
+            {
+                _logger.LogError("Exception during creation Organization");
+                throw;
+            }
+        }
+        
+        private async Task<string> GetCodeWithRetry(string inn)
+        {
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .RetryAsync(3, (exception, retryCount) =>
                 {
-                    _logger.LogError("Exception during creation Organization");
-                    throw;
-                }
-           
+                    _logger.LogWarning($"Exception in GetCode. Retry count: {retryCount}. Exception: {exception}");
+                });
+
+            return await retryPolicy.ExecuteAsync(async () => await _codeSource.GetCode(inn));
+        }
+
+        private async Task<string> GetSalaryWithRetry(string inn, string code)
+        {
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .RetryAsync(3, (exception, retryCount) =>
+                {
+                    _logger.LogWarning($"Exception in GetSalary. Retry count: {retryCount}. Exception: {exception}");
+                });
+
+            return await retryPolicy.ExecuteAsync(async () => await _salarySource.GetSalary(inn, code));
         }
     }
 }
